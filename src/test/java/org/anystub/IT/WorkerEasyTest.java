@@ -1,7 +1,6 @@
-package ru.feech;
+package org.anystub.IT;
 
 import org.anystub.Base;
-import org.anystub.Supplier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,14 +23,8 @@ public class WorkerEasyTest {
             @Override
             public String get() throws IOException {
                 SourceSystem th = this;
-                return base.request(new Supplier<String, IOException>() {
-                                        @Override
-                                        public String get() throws IOException {
-                                            return th.get();
-                                        }
-                                    },
+                return base.request(() -> th.get(),
                         getPath());
-
             }
 
             @Override

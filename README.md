@@ -2,7 +2,7 @@
 
 # anystub   
 
-[![Build Status](https://travis-ci.org/anystub/anystub.svg?branch=master)](https://travis-ci.org/anystub/anystub) [![quality](https://sonarqube.com/api/badges/gate?key=org.anystub:anystub)](https://sonarqube.com/dashboard?id=org.anystub:anystub)
+[![Build Status](https://travis-ci.org/anystub/anystub.svg?branch=master)](https://travis-ci.org/anystub/anystub) [![quality](https://sonarqube.com/api/badges/gate?key=org.anystub:anystub)](https://sonarqube.com/dashboard?id=org.anystub:anystub) [![gitter.im/anystub-java](https://badges.gitter.im/anystub-java.svg)](https://badges.gitter.im/anystub-java.svg)
 
 record input/output for tests in java. inspired by vcr for rails
 

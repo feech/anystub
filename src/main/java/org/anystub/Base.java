@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 /**
  * provide basic access to stub-file
@@ -178,7 +179,7 @@ public class Base {
 
     public Iterator<String> getVals(String... keys) throws NoSuchElementException {
         return getDocument(keys)
-                .get()
+                .orElseThrow(NoSuchElementException::new)
                 .getVals();
     }
 
@@ -276,7 +277,7 @@ public class Base {
                                               String... keys) throws E {
         return request2(supplier,
                 values -> values == null ? null : decoder.decode(values.iterator().next()),
-                t -> t == null ? null : asList(encoder.encode(t)),
+                t -> t == null ? null : singletonList(encoder.encode(t)),
                 keys
         );
     }
@@ -334,7 +335,7 @@ public class Base {
             try {
                 save();
             } catch (IOException io_ex) {
-                log.warning(()->"exception information is not saved into stub: " + io_ex.getMessage());
+                log.warning(()->"exception information is not saved into stub: " + io_ex);
             }
             throw ex;
         }
@@ -355,7 +356,7 @@ public class Base {
         try {
             save();
         } catch (IOException ex) {
-            log.warning(()->"exception information is not saved into stub: " + ex.getMessage());
+            log.warning(()->"exception information is not saved into stub: " + ex);
         }
         if (responseData == null) {
             return null;
@@ -371,7 +372,7 @@ public class Base {
         try {
             load();
         } catch (IOException e) {
-            log.info(()->"init: loading failed");
+            log.info(()->"loading failed during loading: " + e);
         }
     }
 
@@ -396,13 +397,13 @@ public class Base {
                             try {
                                 documentList.add(new Document((Map<String, Object>) x.getValue()));
                             } catch (RuntimeException ex) {
-                                log.warning(() -> String.format("document %s isn't loaded: %s", x.getKey(), ex.getMessage()));
+                                log.warning(() -> String.format("document %s isn't loaded: %s, %s", x.getKey(), ex.toString()));
                             }
                         });
             }
             isNew = false;
         } catch (FileNotFoundException e) {
-            log.info(()->"stub file not found: " + file.getAbsolutePath());
+            log.info(()->String.format("stub file not found: %s, %s", file.getAbsolutePath(), e.toString()));
         }
     }
 

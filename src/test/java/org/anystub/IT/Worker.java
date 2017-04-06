@@ -1,4 +1,4 @@
-package ru.feech;
+package org.anystub.IT;
 
 import org.springframework.stereotype.Component;
 

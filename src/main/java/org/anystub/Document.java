@@ -6,6 +6,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
@@ -23,7 +24,7 @@ public class Document {
     private boolean nullValue = false;
 
     public Document() {
-
+        // just explicit declaration. to be consistent
     }
 
     public Document(String... keys) {
@@ -33,10 +34,15 @@ public class Document {
     }
 
     public Document(Throwable ex, String... keys) {
-        this.keys.addAll(asList(keys));
+        stream(keys)
+                .forEach(this.keys::add);
 
         this.exception.add(ex.getClass().getCanonicalName());
         this.exception.add(ex.getMessage());
+    }
+
+    public Document(Map<String, Object> document) {
+        this.assign(document);
     }
 
     /**
@@ -61,7 +67,7 @@ public class Document {
     }
 
     public Document setValues(String... values) {
-        nullValue=false;
+        nullValue = false;
         this.values.clear();
         stream(values)
                 .forEach(this.values::add);
@@ -70,7 +76,7 @@ public class Document {
     }
 
     public Document setValues(Iterable<String> values) {
-        nullValue=false;
+        nullValue = false;
         this.values.clear();
         values
                 .forEach(this.values::add);
@@ -78,13 +84,13 @@ public class Document {
         return this;
     }
 
-    public Document setNull(){
-        nullValue=true;
+    public Document setNull() {
+        nullValue = true;
         this.values.clear();
         return this;
     }
 
-    public boolean isNullValue(){
+    public boolean isNullValue() {
         return nullValue;
     }
 
@@ -94,7 +100,7 @@ public class Document {
 
     public <E extends Throwable> Iterator<String> getVals() throws E {
         if (exception.isEmpty()) {
-            if(nullValue){
+            if (nullValue) {
                 return null;
             }
             return values.iterator();
@@ -109,7 +115,7 @@ public class Document {
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             String msg = String.format("exception class %s not found, RuntimeException is thrown", exception.get(0));
             logger.warning(() -> msg);
-            throw new RuntimeException(exception.get(1));
+            throw new RuntimeException(exception.get(1), e);
         }
 
     }
@@ -119,9 +125,13 @@ public class Document {
     }
 
     /**
-     * exact matching
+     * exact matching the document to given key.
+     * the document is not matched to 'keys' if:
+     * - it has less values in key then argument array
+     * - it has at least one value in its key that's not equal to correspondent non-null value in argument array
+     * * null values in argument array aren't used for matching
      *
-     * @param keys keys for matching
+     * @param keys keys for matching (null values are skipped from matching but length of key is compared)
      * @return true if document is matched
      */
     public boolean match_to(String... keys) {
@@ -173,8 +183,8 @@ public class Document {
      * @return true if document is matched
      */
     public boolean matchEx_to(String[] keys, String[] values) {
-        if(this.nullValue){
-            return values==null;
+        if (this.nullValue) {
+            return values == null;
         }
 
         if (this.values.size() < values.length) {
@@ -192,6 +202,83 @@ public class Document {
             }
         }
         return true;
+    }
+
+    public void assert_to(String... keys) {
+        if (!match_to(keys)) {
+            fail(keys);
+        }
+    }
+    public void assertEx_to(String... keys) {
+        if (!matchEx_to(keys)) {
+            fail(keys);
+        }
+    }
+    public void assertEx_to(String[] keys, String[] values) {
+        if (!matchEx_to(keys,values)) {
+            if(!matchEx_to(keys)){
+                fail(keys);
+            }else {
+                fail_value(values);
+            }
+        }
+    }
+
+    private void fail(String... keys) {
+        String msg;
+
+        if (this.keys.size() < keys.length) {
+            msg = "number values in key expected: "
+                    + keys.length + " and more"
+                    + " but was: "
+                    + this.keys.size();
+        } else {
+            msg = "expected: "
+                    + key_to_string(keys)
+                    + " but was: "
+                    + key_to_string();
+        }
+        throw new AssertionError(msg);
+    }
+
+    private void fail_value(String... values) {
+        String msg;
+
+        if (this.keys.size() < values.length) {
+            msg = "number values in value expected: "
+                    + values.length + " and more"
+                    + " but was: "
+                    + this.keys.size();
+        } else {
+            msg = "expected value: "
+                    + key_to_string(values)
+                    + " but was: "
+                    + key_to_string();
+        }
+        throw new AssertionError(msg);
+    }
+
+    public String key_to_string() {
+        if (nullValue) {
+            return "null";
+        }
+        return key_to_string(keys.toArray(new String[0]));
+    }
+
+    public static String key_to_string(String... keys) {
+        if (keys == null) {
+            return "null";
+        } else if (keys.length == 0) {
+            return "[]";
+        } else if (keys.length == 1) {
+            return keys[0];
+        }
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("[");
+        stringBuilder.append(stream(keys).collect(Collectors.joining(", ")));
+        stringBuilder.append("]");
+        return stringBuilder.toString();
     }
 
 
@@ -260,9 +347,9 @@ public class Document {
             res.put("keys", keys);
         }
 
-        if(nullValue){
+        if (nullValue) {
             res.put("values", null);
-        }else if (values.size() == 1 && values.get(0)!=null) {
+        } else if (values.size() == 1 && values.get(0) != null) {
             res.put("values", values.get(0));
         } else {
             res.put("values", values);
@@ -273,7 +360,8 @@ public class Document {
         return res;
     }
 
-    public Document(Map<String, Object> document) {
+
+    private void assign(Map<String, Object> document) {
         if (document.get("keys") instanceof Iterable) {
             ((Iterable) document.get("keys"))
                     .forEach(x -> this.keys.add((String) x));
@@ -281,9 +369,9 @@ public class Document {
             this.keys.add((String) document.get("keys"));
         }
 
-        if(document.get("values")==null){
+        if (document.get("values") == null) {
             this.setNull();
-        }else if (document.get("values") instanceof Iterable) {
+        } else if (document.get("values") instanceof Iterable) {
             ((Iterable) document.get("values"))
                     .forEach(x -> this.values.add((String) x));
         } else {
